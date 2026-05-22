@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>개발환경 설치</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #0d1117;
+      color: #fff;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 10px; }
+    p  { color: #aaa; margin-bottom: 30px; }
+    .cmd {
+      background: #161b22;
+      border: 1px solid #30363d;
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+      color: #58a6ff;
+    }
+    button {
+      background: #238636;
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover { background: #2ea043; }
+    #status {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: #3fb950;
+      min-height: 24px;
+    }
+    ol {
+      color: #aaa;
+      line-height: 2;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>개발환경 자동 설치</h1>
+  <p>아래 버튼을 누르면 명령어가 복사됩니다</p>
+
+  <div class="cmd">irm https://raw.githubusercontent.com/33bnm3-sudo/setup/main/setup.ps1 | iex</div>
+
+  <button onclick="copyCmd()">명령어 복사</button>
+  <div id="status"></div>
+
+  <ol>
+    <li>위 버튼 클릭 → 명령어 복사됨</li>
+    <li>윈도우 검색에서 <b>PowerShell</b> 우클릭 → 관리자 권한으로 실행</li>
+    <li><b>Ctrl+V</b> 붙여넣기 → <b>Enter</b></li>
+  </ol>
+
+  <script>
+    const cmd = 'irm https://raw.githubusercontent.com/33bnm3-sudo/setup/main/setup.ps1 | iex';
+
+    function copyCmd() {
+      navigator.clipboard.writeText(cmd).then(() => {
+        document.getElementById('status').textContent = '✅ 복사 완료! PowerShell 열고 Ctrl+V 누르세요';
+      });
+    }
+
+    // 페이지 열리면 자동 복사
+    window.onload = () => navigator.clipboard.writeText(cmd).catch(() => {});
+  </script>
+</body>
+</html>
