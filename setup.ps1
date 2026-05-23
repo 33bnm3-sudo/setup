@@ -16,37 +16,38 @@ function Test-Registry($name) {
     )
 }
 
-$hasVSCode     = (Test-Registry "Visual Studio Code") -or
-                 (Test-Path "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe") -or
-                 (Test-Path "$env:ProgramFiles\Microsoft VS Code\Code.exe")
-$hasGit        = [bool](Get-Command git -ErrorAction SilentlyContinue)
-$hasNode       = [bool](Get-Command node -ErrorAction SilentlyContinue)
-$hasPlasticity = Test-Registry "Plasticity"
-$hasClaudeCode = [bool](Get-Command claude -ErrorAction SilentlyContinue)
-$hasGDrive     = (Test-Registry "Google Drive") -or
-                 (Test-Path "$env:ProgramFiles\Google\Drive File Stream\GoogleDriveFS.exe") -or
-                 (Test-Path "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe")
-$hasAHK        = Test-Path "$env:USERPROFILE\ahk-portable\AutoHotkeyU64.exe"
+$hasVSCode        = (Test-Registry "Visual Studio Code") -or
+                    (Test-Path "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe") -or
+                    (Test-Path "$env:ProgramFiles\Microsoft VS Code\Code.exe")
+$hasGit           = [bool](Get-Command git -ErrorAction SilentlyContinue)
+$hasNode          = [bool](Get-Command node -ErrorAction SilentlyContinue)
+$hasPlasticity    = Test-Registry "Plasticity"
+$hasClaudeDesktop = (Test-Registry "Claude") -or
+                    (Test-Path "$env:LOCALAPPDATA\AnthropicClaude\Claude.exe")
+$hasGDrive        = (Test-Registry "Google Drive") -or
+                    (Test-Path "$env:ProgramFiles\Google\Drive File Stream\GoogleDriveFS.exe") -or
+                    (Test-Path "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe")
+$hasAHK           = Test-Path "$env:USERPROFILE\ahk-portable\AutoHotkeyU64.exe"
 
 $installList = @(
-    @{ Name = "VS Code";      Has = $hasVSCode     },
-    @{ Name = "Git";          Has = $hasGit        },
-    @{ Name = "Node.js";      Has = $hasNode       },
-    @{ Name = "Plasticity";   Has = $hasPlasticity },
-    @{ Name = "Claude Code";  Has = $hasClaudeCode },
-    @{ Name = "Google Drive"; Has = $hasGDrive     },
-    @{ Name = "캡스락 한영키"; Has = $hasAHK        }
+    @{ Name = "VS Code";         Has = $hasVSCode        },
+    @{ Name = "Git";             Has = $hasGit           },
+    @{ Name = "Node.js";         Has = $hasNode          },
+    @{ Name = "Plasticity";      Has = $hasPlasticity    },
+    @{ Name = "Claude Desktop";  Has = $hasClaudeDesktop },
+    @{ Name = "Google Drive";    Has = $hasGDrive        },
+    @{ Name = "캡스락 한영키";    Has = $hasAHK           }
 )
 
 $alreadyInstalled = $installList | Where-Object { $_.Has }
 $toInstall        = $installList | Where-Object { -not $_.Has }
 
 if ($alreadyInstalled) {
-    Write-Host "`n  ── 건너뜀 (이미 설치됨) ──" -ForegroundColor Green
+    Write-Host "`n  -- 건너뜀 (이미 설치됨) --" -ForegroundColor Green
     $alreadyInstalled | ForEach-Object { Write-Host "  [v] $($_.Name)" -ForegroundColor Green }
 }
 if ($toInstall) {
-    Write-Host "`n  ── 새로 설치할 항목 ──" -ForegroundColor Yellow
+    Write-Host "`n  -- 새로 설치할 항목 --" -ForegroundColor Yellow
     $toInstall | ForEach-Object { Write-Host "  [ ] $($_.Name)" -ForegroundColor Yellow }
 }
 Write-Host ""
@@ -59,7 +60,7 @@ if (-not $hasVSCode) {
 }
 
 if (-not $hasGit) {
-    Write-Host "`nGit 최신 버전 URL 확인 중..." -ForegroundColor Gray
+    Write-Host "Git 최신 버전 URL 확인 중..." -ForegroundColor Gray
     try {
         $gitAssets = (Invoke-RestMethod "https://api.github.com/repos/git-for-windows/git/releases/latest").assets
         $gitUrl = ($gitAssets | Where-Object { $_.name -match "^Git-[\d.]+-64-bit\.exe$" } | Select-Object -First 1).browser_download_url
@@ -83,6 +84,10 @@ if (-not $hasPlasticity) {
     $downloads += @{ Url = "https://github.com/nkallen/plasticity/releases/download/v26.1.3/Plasticity.msi"; Out = "$temp\plasticity.msi"; Name = "Plasticity" }
 }
 
+if (-not $hasClaudeDesktop) {
+    $downloads += @{ Url = "https://storage.googleapis.com/osprey-downloads-c02f6a0d-347c-492b-a752-3e0651722e97/nest-win-x64/Claude-Setup-x64.exe"; Out = "$temp\claude-setup.exe"; Name = "Claude Desktop" }
+}
+
 if (-not $hasGDrive) {
     $downloads += @{ Url = "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe"; Out = "$temp\gdrive.exe"; Name = "Google Drive" }
 }
@@ -93,9 +98,9 @@ if (-not $hasAHK) {
 
 # ── 다운로드 ───────────────────────────────────────────────────
 if ($downloads.Count -eq 0) {
-    Write-Host "`n모든 프로그램이 이미 설치되어 있습니다!" -ForegroundColor Green
+    Write-Host "모든 프로그램이 이미 설치되어 있습니다!" -ForegroundColor Green
 } else {
-    Write-Host "`n$($downloads.Count)개 파일 동시 다운로드 중..." -ForegroundColor Yellow
+    Write-Host "$($downloads.Count)개 파일 동시 다운로드 중..." -ForegroundColor Yellow
     $jobs = $downloads | ForEach-Object {
         $d = $_
         Start-Job -ScriptBlock {
@@ -144,36 +149,21 @@ if (-not $hasNode -and (Test-Path "$temp\node.msi")) {
     $step++
 }
 
-if (-not $hasPlasticity) {
+if (-not $hasPlasticity -and (Test-Path "$temp\plasticity.msi")) {
     Write-Host "[$step] Plasticity 설치 중..." -ForegroundColor Yellow
     Start-Process msiexec.exe -ArgumentList "/i `"$temp\plasticity.msi`" /quiet /norestart" -Wait
     $step++
 }
 
-if (-not $hasGDrive) {
-    Write-Host "[$step] Google Drive 설치 중..." -ForegroundColor Yellow
-    Start-Process "$temp\gdrive.exe" -ArgumentList "--silent" -Wait
+if (-not $hasClaudeDesktop -and (Test-Path "$temp\claude-setup.exe")) {
+    Write-Host "[$step] Claude Desktop 설치 중..." -ForegroundColor Yellow
+    Start-Process "$temp\claude-setup.exe" -ArgumentList "--silent" -Wait
     $step++
 }
 
-if (-not $hasClaudeCode) {
-    Write-Host "[$step] Claude Code 설치 중..." -ForegroundColor Yellow
-    # 방금 설치된 Node.js 포함해서 PATH 갱신
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("Path","User")
-    # npm 위치 탐색 (PATH 갱신 후에도 못 찾으면 직접 경로 시도)
-    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-    if (-not $npmCmd) {
-        $npmCmd = @(
-            "$env:ProgramFiles\nodejs\npm.cmd",
-            "$env:ProgramW6432\nodejs\npm.cmd"
-        ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-    }
-    if ($npmCmd) {
-        & $npmCmd install -g @anthropic-ai/claude-code
-    } else {
-        Write-Host "  npm을 찾을 수 없습니다. PowerShell 재시작 후 실행하세요: npm install -g @anthropic-ai/claude-code" -ForegroundColor Red
-    }
+if (-not $hasGDrive -and (Test-Path "$temp\gdrive.exe")) {
+    Write-Host "[$step] Google Drive 설치 중..." -ForegroundColor Yellow
+    Start-Process "$temp\gdrive.exe" -ArgumentList "--silent" -Wait
     $step++
 }
 
@@ -182,7 +172,6 @@ if (-not $hasAHK) {
     Write-Host "[$step] 캡스락 한영키 설정 중..." -ForegroundColor Yellow
     $ahkDir = "$env:USERPROFILE\ahk-portable"
     New-Item -ItemType Directory -Force -Path $ahkDir | Out-Null
-    # 실행 중인 AHK 종료 (파일 잠금 방지)
     Get-Process | Where-Object { $_.Name -like "*AutoHotkey*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 1
     Expand-Archive "$temp\ahk.zip" -DestinationPath $ahkDir -Force
@@ -196,7 +185,7 @@ CapsLock::vk15
 }
 
 # ── 바탕화면 바로가기 생성 ────────────────────────────────────
-Write-Host "`n── 바탕화면 바로가기 확인 중... ──" -ForegroundColor Cyan
+Write-Host "`n-- 바탕화면 바로가기 확인 중... --" -ForegroundColor Cyan
 $ws      = New-Object -ComObject WScript.Shell
 $desktop = [Environment]::GetFolderPath("Desktop")
 
@@ -209,10 +198,17 @@ $desktop = [Environment]::GetFolderPath("Desktop")
         )
     },
     @{
+        Name   = "Claude"
+        Target = @(
+            "$env:LOCALAPPDATA\AnthropicClaude\Claude.exe"
+        )
+    },
+    @{
         Name   = "Google Drive"
         Target = @(
             "$env:ProgramFiles\Google\Drive File Stream\GoogleDriveFS.exe",
-            "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe"
+            "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe",
+            "$env:LOCALAPPDATA\Google\DriveFS\GoogleDriveFS.exe"
         )
     }
 ) | ForEach-Object {
