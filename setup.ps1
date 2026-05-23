@@ -100,7 +100,8 @@ if (-not $hasAHK) {
 if ($downloads.Count -eq 0) {
     Write-Host "모든 프로그램이 이미 설치되어 있습니다!" -ForegroundColor Green
 } else {
-    Write-Host "$($downloads.Count)개 파일 동시 다운로드 중..." -ForegroundColor Yellow
+    Write-Host "$($downloads.Count)개 파일 다운로드 중...`n" -ForegroundColor Yellow
+
     $jobs = $downloads | ForEach-Object {
         $d = $_
         Start-Job -ScriptBlock {
@@ -108,23 +109,56 @@ if ($downloads.Count -eq 0) {
             try {
                 $wc = New-Object System.Net.WebClient
                 $wc.DownloadFile($using:d.Url, $using:d.Out)
-                "[OK] $($using:d.Name) 완료"
+                "[OK] $($using:d.Name)"
             } catch {
                 "[실패] $($using:d.Name): $($_.Exception.Message)"
             }
         }
     }
+
+    # 파일별 진행 상황 표시
+    $startLine = [Console]::CursorTop
+    foreach ($d in $downloads) {
+        Write-Host ("  {0,-18} 시작 중..." -f $d.Name) -ForegroundColor Gray
+    }
+
     while ($jobs | Where-Object { $_.State -eq 'Running' }) {
-        $done = ($jobs | Where-Object { $_.State -ne 'Running' }).Count
-        Write-Host "`r  다운로드 $done / $($jobs.Count) 완료..." -NoNewline
-        Start-Sleep -Seconds 1
+        $i = 0
+        foreach ($d in $downloads) {
+            [Console]::SetCursorPosition(0, $startLine + $i)
+            if (Test-Path $d.Out) {
+                $mb = [math]::Round((Get-Item $d.Out -ErrorAction SilentlyContinue).Length / 1MB, 1)
+                Write-Host ("  {0,-18} {1,6:F1} MB 다운로드 중..." -f $d.Name, $mb) -NoNewline -ForegroundColor Yellow
+            }
+            $i++
+        }
+        [Console]::SetCursorPosition(0, $startLine + $downloads.Count)
+        Start-Sleep -Milliseconds 500
     }
-    Write-Host ""
-    $jobs | Receive-Job | ForEach-Object {
-        if ($_ -like "[실패]*") { Write-Host "  $_" -ForegroundColor Red }
-        else                    { Write-Host "  $_" -ForegroundColor Green }
-    }
+
+    # 최종 결과로 각 줄 업데이트
+    $results = $jobs | Receive-Job
     $jobs | Remove-Job
+
+    $i = 0
+    foreach ($d in $downloads) {
+        [Console]::SetCursorPosition(0, $startLine + $i)
+        $r = $results | Where-Object { $_ -like "*$($d.Name)*" } | Select-Object -First 1
+        if ($r -like "[OK]*") {
+            $mb = if (Test-Path $d.Out) { [math]::Round((Get-Item $d.Out).Length / 1MB, 0) } else { "?" }
+            Write-Host ("  {0,-18} {1,4} MB  완료          " -f $d.Name, $mb) -ForegroundColor Green
+        } elseif ($r -like "[실패]*") {
+            Write-Host ("  {0,-18} 실패                    " -f $d.Name) -ForegroundColor Red
+        }
+        $i++
+    }
+    [Console]::SetCursorPosition(0, $startLine + $downloads.Count)
+    Write-Host ""
+
+    # 실패한 항목 오류 메시지 출력
+    $results | Where-Object { $_ -like "[실패]*" } | ForEach-Object {
+        Write-Host "  $_" -ForegroundColor Red
+    }
 }
 
 # ── 설치 ───────────────────────────────────────────────────────
