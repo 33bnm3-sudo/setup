@@ -297,7 +297,7 @@ if (-not $gdPath) {
 }
 
 if ($gdPath) {
-    $gdClaudeConfig = "$gdPath\claude-config"
+    $gdClaudeConfig = "$gdPath\Claude\claude-config"
 
     # 이미 심볼릭 링크로 연동됐는지 확인
     $existing = Get-Item $claudeData -ErrorAction SilentlyContinue
@@ -331,7 +331,7 @@ Write-Host "`n-- Claude Code 대화 로그 Google Drive 연동 중... --" -Foreg
 
 if ($gdPath) {
     $claudeCode   = "$env:USERPROFILE\.claude"
-    $gdClaudeCode = "$gdPath\claude-code"
+    $gdClaudeCode = "$gdPath\Claude\claude-code"
 
     $existingCode = Get-Item $claudeCode -ErrorAction SilentlyContinue -Force
     if ($existingCode -and ($existingCode.Attributes -band [IO.FileAttributes]::ReparsePoint)) {

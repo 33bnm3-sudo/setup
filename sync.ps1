@@ -34,7 +34,7 @@ if (-not $gdPath) {
     exit 1
 }
 
-$gdClaudeConfig = "$gdPath\claude-config"
+$gdClaudeConfig = "$gdPath\Claude\claude-config"
 Write-Host "Google Drive 경로: $gdPath" -ForegroundColor Gray
 
 # 이미 연동됐는지 확인
