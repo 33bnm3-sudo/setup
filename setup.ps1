@@ -28,7 +28,7 @@ $hasGDrive     = (Test-Registry "Google Drive") -or
                  (Test-Path "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe")
 $hasAHK        = Test-Path "$env:USERPROFILE\ahk-portable\AutoHotkeyU64.exe"
 
-@(
+$installList = @(
     @{ Name = "VS Code";      Has = $hasVSCode     },
     @{ Name = "Git";          Has = $hasGit        },
     @{ Name = "Node.js";      Has = $hasNode       },
@@ -36,10 +36,20 @@ $hasAHK        = Test-Path "$env:USERPROFILE\ahk-portable\AutoHotkeyU64.exe"
     @{ Name = "Claude Code";  Has = $hasClaudeCode },
     @{ Name = "Google Drive"; Has = $hasGDrive     },
     @{ Name = "캡스락 한영키"; Has = $hasAHK        }
-) | ForEach-Object {
-    if ($_.Has) { Write-Host "  [v] $($_.Name) - 이미 설치됨" -ForegroundColor Green }
-    else        { Write-Host "  [ ] $($_.Name) - 설치 필요"   -ForegroundColor Yellow }
+)
+
+$alreadyInstalled = $installList | Where-Object { $_.Has }
+$toInstall        = $installList | Where-Object { -not $_.Has }
+
+if ($alreadyInstalled) {
+    Write-Host "`n  ── 건너뜀 (이미 설치됨) ──" -ForegroundColor Green
+    $alreadyInstalled | ForEach-Object { Write-Host "  [v] $($_.Name)" -ForegroundColor Green }
 }
+if ($toInstall) {
+    Write-Host "`n  ── 새로 설치할 항목 ──" -ForegroundColor Yellow
+    $toInstall | ForEach-Object { Write-Host "  [ ] $($_.Name)" -ForegroundColor Yellow }
+}
+Write-Host ""
 
 # ── 다운로드 목록 구성 ─────────────────────────────────────────
 $downloads = @()
@@ -90,9 +100,13 @@ if ($downloads.Count -eq 0) {
         $d = $_
         Start-Job -ScriptBlock {
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            $wc = New-Object System.Net.WebClient
-            $wc.DownloadFile($using:d.Url, $using:d.Out)
-            "$($using:d.Name) 완료"
+            try {
+                $wc = New-Object System.Net.WebClient
+                $wc.DownloadFile($using:d.Url, $using:d.Out)
+                "[OK] $($using:d.Name) 완료"
+            } catch {
+                "[실패] $($using:d.Name): $($_.Exception.Message)"
+            }
         }
     }
     while ($jobs | Where-Object { $_.State -eq 'Running' }) {
@@ -101,7 +115,10 @@ if ($downloads.Count -eq 0) {
         Start-Sleep -Seconds 1
     }
     Write-Host ""
-    $jobs | Receive-Job | ForEach-Object { Write-Host "  [OK] $_" -ForegroundColor Green }
+    $jobs | Receive-Job | ForEach-Object {
+        if ($_ -like "[실패]*") { Write-Host "  $_" -ForegroundColor Red }
+        else                    { Write-Host "  $_" -ForegroundColor Green }
+    }
     $jobs | Remove-Job
 }
 
