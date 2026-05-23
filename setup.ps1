@@ -326,4 +326,42 @@ if ($gdPath) {
     Write-Host "      Google Drive 로그인 후 스크립트를 다시 실행하세요." -ForegroundColor Red
 }
 
+# ── Claude Code 대화 로그 Google Drive 연동 ─────────────────────
+Write-Host "`n-- Claude Code 대화 로그 Google Drive 연동 중... --" -ForegroundColor Cyan
+
+if ($gdPath) {
+    $claudeCode   = "$env:USERPROFILE\.claude"
+    $gdClaudeCode = "$gdPath\claude-code"
+
+    $existingCode = Get-Item $claudeCode -ErrorAction SilentlyContinue -Force
+    if ($existingCode -and ($existingCode.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Write-Host "  [v] 이미 Google Drive에 연동됨: $gdClaudeCode" -ForegroundColor Green
+    } else {
+        if (-not (Test-Path $gdClaudeCode)) {
+            New-Item -ItemType Directory -Force -Path $gdClaudeCode | Out-Null
+            Write-Host "  [OK] Google Drive에 claude-code 폴더 생성됨" -ForegroundColor Green
+        } else {
+            Write-Host "  [v] Google Drive claude-code 폴더 이미 있음 (기존 대화 로그 사용)" -ForegroundColor Green
+        }
+
+        if (Test-Path $claudeCode) {
+            Write-Host "  기존 대화 로그를 Google Drive로 복사 중..." -ForegroundColor Yellow
+            Copy-Item "$claudeCode\*" $gdClaudeCode -Recurse -Force -ErrorAction SilentlyContinue
+            $item = Get-Item $claudeCode -Force -ErrorAction SilentlyContinue
+            if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                cmd /c rmdir "$claudeCode" | Out-Null
+            } else {
+                Remove-Item $claudeCode -Recurse -Force
+            }
+        }
+
+        cmd /c mklink /J "$claudeCode" "$gdClaudeCode" | Out-Null
+        Write-Host "  [OK] 연동 완료!" -ForegroundColor Green
+        Write-Host "       $claudeCode" -ForegroundColor Gray
+        Write-Host "       -> $gdClaudeCode" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  [!] Google Drive 경로 없음 — Claude Code 연동 건너뜀" -ForegroundColor Red
+}
+
 Write-Host "`n=== 완료! ===" -ForegroundColor Green
