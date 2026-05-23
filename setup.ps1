@@ -262,4 +262,64 @@ $desktop = [Environment]::GetFolderPath("Desktop")
     }
 }
 
+# ── Claude Desktop 설정 Google Drive 연동 ─────────────────────
+Write-Host "`n-- Claude Desktop 설정 Google Drive 연동 중... --" -ForegroundColor Cyan
+
+function Find-GoogleDrivePath {
+    # 드라이브 문자 전체 스캔 (Google Drive for Desktop 가상 드라이브 탐색)
+    $found = 65..90 | ForEach-Object {
+        $root = [char]$_ + ":\"
+        if ((Test-Path "${root}My Drive") -and (Test-Path "${root}.shortcut-targets-by-id")) {
+            "${root}My Drive"
+        }
+    } | Select-Object -First 1
+    if ($found) { return $found }
+
+    # 일반 폴더 경로 확인
+    @(
+        "$env:USERPROFILE\Google Drive\My Drive",
+        "$env:USERPROFILE\My Drive"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
+$claudeData  = "$env:APPDATA\Claude"
+$gdPath      = Find-GoogleDrivePath
+
+if (-not $gdPath) {
+    Write-Host "  Google Drive에 로그인해주세요." -ForegroundColor Yellow
+    Write-Host "  로그인 완료 후 Enter를 누르세요..." -ForegroundColor Yellow
+    Read-Host
+    $gdPath = Find-GoogleDrivePath
+}
+
+if ($gdPath) {
+    $gdClaudeConfig = "$gdPath\claude-config"
+
+    # 이미 심볼릭 링크로 연동됐는지 확인
+    $existing = Get-Item $claudeData -ErrorAction SilentlyContinue
+    if ($existing -and ($existing.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Write-Host "  [v] 이미 Google Drive에 연동됨: $gdClaudeConfig" -ForegroundColor Green
+    } else {
+        # Google Drive에 claude-config 폴더 생성
+        if (-not (Test-Path $gdClaudeConfig)) {
+            New-Item -ItemType Directory -Force -Path $gdClaudeConfig | Out-Null
+        }
+
+        # 기존 로컬 설정 있으면 Google Drive로 이동
+        if (Test-Path $claudeData) {
+            Copy-Item "$claudeData\*" $gdClaudeConfig -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item $claudeData -Recurse -Force
+        }
+
+        # 심볼릭 링크 생성
+        New-Item -ItemType SymbolicLink -Path $claudeData -Target $gdClaudeConfig -ErrorAction Stop | Out-Null
+        Write-Host "  [OK] 연동 완료!" -ForegroundColor Green
+        Write-Host "       $claudeData" -ForegroundColor Gray
+        Write-Host "       -> $gdClaudeConfig" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  [!] Google Drive 경로를 찾을 수 없습니다." -ForegroundColor Red
+    Write-Host "      Google Drive 로그인 후 스크립트를 다시 실행하세요." -ForegroundColor Red
+}
+
 Write-Host "`n=== 완료! ===" -ForegroundColor Green
