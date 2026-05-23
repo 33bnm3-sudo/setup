@@ -266,19 +266,23 @@ $desktop = [Environment]::GetFolderPath("Desktop")
 Write-Host "`n-- Claude Desktop 설정 Google Drive 연동 중... --" -ForegroundColor Cyan
 
 function Find-GoogleDrivePath {
-    # 드라이브 문자 전체 스캔 (Google Drive for Desktop 가상 드라이브 탐색)
+    # 드라이브 문자 전체 스캔 (한국어/영어 폴더명 모두 지원)
     $found = 65..90 | ForEach-Object {
         $root = [char]$_ + ":\"
-        if ((Test-Path "${root}My Drive") -and (Test-Path "${root}.shortcut-targets-by-id")) {
-            "${root}My Drive"
+        if (-not (Test-Path $root)) { return }
+        # "내 드라이브" (한국어) 또는 "My Drive" (영어)
+        foreach ($name in @("내 드라이브", "My Drive")) {
+            if (Test-Path "${root}${name}") { return "${root}${name}" }
         }
-    } | Select-Object -First 1
+    } | Where-Object { $_ } | Select-Object -First 1
     if ($found) { return $found }
 
     # 일반 폴더 경로 확인
     @(
         "$env:USERPROFILE\Google Drive\My Drive",
-        "$env:USERPROFILE\My Drive"
+        "$env:USERPROFILE\Google Drive\내 드라이브",
+        "$env:USERPROFILE\My Drive",
+        "$env:USERPROFILE\내 드라이브"
     ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 }
 
