@@ -236,14 +236,6 @@ $desktop = [Environment]::GetFolderPath("Desktop")
         Target = @(
             "$env:LOCALAPPDATA\AnthropicClaude\Claude.exe"
         )
-    },
-    @{
-        Name   = "Google Drive"
-        Target = @(
-            "$env:ProgramFiles\Google\Drive File Stream\GoogleDriveFS.exe",
-            "${env:ProgramFiles(x86)}\Google\Drive File Stream\GoogleDriveFS.exe",
-            "$env:LOCALAPPDATA\Google\DriveFS\GoogleDriveFS.exe"
-        )
     }
 ) | ForEach-Object {
     $lnk = "$desktop\$($_.Name).lnk"
@@ -260,108 +252,6 @@ $desktop = [Environment]::GetFolderPath("Desktop")
     } else {
         Write-Host "  [!] $($_.Name) 실행 파일 없음 (설치 확인 필요)" -ForegroundColor Yellow
     }
-}
-
-# ── Claude Desktop 설정 Google Drive 연동 ─────────────────────
-Write-Host "`n-- Claude Desktop 설정 Google Drive 연동 중... --" -ForegroundColor Cyan
-
-function Find-GoogleDrivePath {
-    # 드라이브 문자 전체 스캔 (한국어/영어 폴더명 모두 지원)
-    $found = 65..90 | ForEach-Object {
-        $root = [char]$_ + ":\"
-        if (-not (Test-Path $root)) { return }
-        # "내 드라이브" (한국어) 또는 "My Drive" (영어)
-        foreach ($name in @("내 드라이브", "My Drive")) {
-            if (Test-Path "${root}${name}") { return "${root}${name}" }
-        }
-    } | Where-Object { $_ } | Select-Object -First 1
-    if ($found) { return $found }
-
-    # 일반 폴더 경로 확인
-    @(
-        "$env:USERPROFILE\Google Drive\My Drive",
-        "$env:USERPROFILE\Google Drive\내 드라이브",
-        "$env:USERPROFILE\My Drive",
-        "$env:USERPROFILE\내 드라이브"
-    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-}
-
-$claudeData  = "$env:APPDATA\Claude"
-$gdPath      = Find-GoogleDrivePath
-
-if (-not $gdPath) {
-    Write-Host "  Google Drive에 로그인해주세요." -ForegroundColor Yellow
-    Write-Host "  로그인 완료 후 Enter를 누르세요..." -ForegroundColor Yellow
-    Read-Host
-    $gdPath = Find-GoogleDrivePath
-}
-
-if ($gdPath) {
-    $gdClaudeConfig = "$gdPath\Claude\claude-config"
-
-    # 이미 심볼릭 링크로 연동됐는지 확인
-    $existing = Get-Item $claudeData -ErrorAction SilentlyContinue
-    if ($existing -and ($existing.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        Write-Host "  [v] 이미 Google Drive에 연동됨: $gdClaudeConfig" -ForegroundColor Green
-    } else {
-        # Google Drive에 claude-config 폴더 생성
-        if (-not (Test-Path $gdClaudeConfig)) {
-            New-Item -ItemType Directory -Force -Path $gdClaudeConfig | Out-Null
-        }
-
-        # 기존 로컬 설정 있으면 Google Drive로 이동
-        if (Test-Path $claudeData) {
-            Copy-Item "$claudeData\*" $gdClaudeConfig -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item $claudeData -Recurse -Force
-        }
-
-        # 심볼릭 링크 생성
-        New-Item -ItemType SymbolicLink -Path $claudeData -Target $gdClaudeConfig -ErrorAction Stop | Out-Null
-        Write-Host "  [OK] 연동 완료!" -ForegroundColor Green
-        Write-Host "       $claudeData" -ForegroundColor Gray
-        Write-Host "       -> $gdClaudeConfig" -ForegroundColor Gray
-    }
-} else {
-    Write-Host "  [!] Google Drive 경로를 찾을 수 없습니다." -ForegroundColor Red
-    Write-Host "      Google Drive 로그인 후 스크립트를 다시 실행하세요." -ForegroundColor Red
-}
-
-# ── Claude Code 대화 로그 Google Drive 연동 ─────────────────────
-Write-Host "`n-- Claude Code 대화 로그 Google Drive 연동 중... --" -ForegroundColor Cyan
-
-if ($gdPath) {
-    $claudeCode   = "$env:USERPROFILE\.claude"
-    $gdClaudeCode = "$gdPath\Claude\claude-code"
-
-    $existingCode = Get-Item $claudeCode -ErrorAction SilentlyContinue -Force
-    if ($existingCode -and ($existingCode.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        Write-Host "  [v] 이미 Google Drive에 연동됨: $gdClaudeCode" -ForegroundColor Green
-    } else {
-        if (-not (Test-Path $gdClaudeCode)) {
-            New-Item -ItemType Directory -Force -Path $gdClaudeCode | Out-Null
-            Write-Host "  [OK] Google Drive에 claude-code 폴더 생성됨" -ForegroundColor Green
-        } else {
-            Write-Host "  [v] Google Drive claude-code 폴더 이미 있음 (기존 대화 로그 사용)" -ForegroundColor Green
-        }
-
-        if (Test-Path $claudeCode) {
-            Write-Host "  기존 대화 로그를 Google Drive로 복사 중..." -ForegroundColor Yellow
-            Copy-Item "$claudeCode\*" $gdClaudeCode -Recurse -Force -ErrorAction SilentlyContinue
-            $item = Get-Item $claudeCode -Force -ErrorAction SilentlyContinue
-            if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-                cmd /c rmdir "$claudeCode" | Out-Null
-            } else {
-                Remove-Item $claudeCode -Recurse -Force
-            }
-        }
-
-        cmd /c mklink /J "$claudeCode" "$gdClaudeCode" | Out-Null
-        Write-Host "  [OK] 연동 완료!" -ForegroundColor Green
-        Write-Host "       $claudeCode" -ForegroundColor Gray
-        Write-Host "       -> $gdClaudeCode" -ForegroundColor Gray
-    }
-} else {
-    Write-Host "  [!] Google Drive 경로 없음 — Claude Code 연동 건너뜀" -ForegroundColor Red
 }
 
 Write-Host "`n=== 완료! ===" -ForegroundColor Green
