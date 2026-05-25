@@ -85,7 +85,7 @@ if (-not $hasPlasticity) {
 }
 
 if (-not $hasClaudeDesktop) {
-    $downloads += @{ Url = "https://storage.googleapis.com/osprey-downloads-c02f6a0d-347c-492b-a752-3e0651722e97/nest-win-x64/Claude-Setup-x64.exe"; Out = "$temp\claude-setup.exe"; Name = "Claude Desktop" }
+    $downloads += @{ Url = "https://claude.ai/api/desktop/win32/x64/setup/latest/redirect"; Out = "$temp\claude-setup.exe"; Name = "Claude Desktop" }
 }
 
 if (-not $hasGDrive) {
