@@ -254,4 +254,11 @@ $desktop = [Environment]::GetFolderPath("Desktop")
     }
 }
 
+# ── 다크모드 설정 ─────────────────────────────────────────────
+Write-Host "`n-- 다크모드 설정 중... --" -ForegroundColor Cyan
+$themePath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+Set-ItemProperty -Path $themePath -Name "SystemUsesLightTheme" -Value 0 -Type DWord
+Set-ItemProperty -Path $themePath -Name "AppsUseLightTheme"    -Value 0 -Type DWord
+Write-Host "  [OK] 다크모드 적용됨" -ForegroundColor Green
+
 Write-Host "`n=== 완료! ===" -ForegroundColor Green
