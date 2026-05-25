@@ -77,19 +77,10 @@
   <!-- 전체 셋업 -->
   <div class="card">
     <h2>전체 셋업 (피시방용)</h2>
-    <p>VS Code, Git, Node.js, Plasticity, Claude Desktop, Google Drive, 한영키 설치 + Claude 연동</p>
+    <p>VS Code, Git, Node.js, Plasticity, Claude Desktop, Google Drive, 한영키 설치</p>
     <div class="cmd" id="cmd-full">irm https://raw.githubusercontent.com/33bnm3-sudo/setup/main/setup.ps1 | iex</div>
     <button onclick="copy('cmd-full', 'status-full')">명령어 복사</button>
     <div class="status" id="status-full"></div>
-  </div>
-
-  <!-- Claude만 연동 -->
-  <div class="card">
-    <h2>Claude만 Google Drive 연동 (집컴용)</h2>
-    <p>이미 셋업된 환경에서 Claude Desktop 설정만 Google Drive에 연동합니다</p>
-    <div class="cmd" id="cmd-sync">irm https://raw.githubusercontent.com/33bnm3-sudo/setup/main/sync.ps1 | iex</div>
-    <button class="secondary" onclick="copy('cmd-sync', 'status-sync')">명령어 복사</button>
-    <div class="status" id="status-sync"></div>
   </div>
 
   <ol>
