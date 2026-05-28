@@ -108,6 +108,7 @@ if ($downloads.Count -eq 0) {
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             try {
                 $wc = New-Object System.Net.WebClient
+                $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 $wc.DownloadFile($using:d.Url, $using:d.Out)
                 "[OK] $($using:d.Name)"
             } catch {
