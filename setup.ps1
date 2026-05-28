@@ -105,11 +105,9 @@ if ($downloads.Count -eq 0) {
     $jobs = $downloads | ForEach-Object {
         $d = $_
         Start-Job -ScriptBlock {
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             try {
-                $wc = New-Object System.Net.WebClient
-                $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                $wc.DownloadFile($using:d.Url, $using:d.Out)
+                & curl.exe -L -s -o $using:d.Out $using:d.Url
+                if ($LASTEXITCODE -ne 0) { throw "curl 실패 (exit $LASTEXITCODE)" }
                 "[OK] $($using:d.Name)"
             } catch {
                 "[실패] $($using:d.Name): $($_.Exception.Message)"
