@@ -97,6 +97,20 @@ if (-not $hasAHK) {
 }
 
 # ── 다운로드 ───────────────────────────────────────────────────
+# Claude Desktop은 Cloudflare 때문에 Job 밖에서 직접 다운로드
+$claudeDl = $downloads | Where-Object { $_.Name -eq "Claude Desktop" }
+if ($claudeDl) {
+    Write-Host "  Claude Desktop 다운로드 중..." -ForegroundColor Yellow
+    & curl.exe -L -s -o $claudeDl.Out $claudeDl.Url
+    if ($LASTEXITCODE -eq 0) {
+        $mb = [math]::Round((Get-Item $claudeDl.Out -ErrorAction SilentlyContinue).Length / 1MB, 0)
+        Write-Host "  Claude Desktop  $mb MB  완료" -ForegroundColor Green
+    } else {
+        Write-Host "  Claude Desktop  다운로드 실패" -ForegroundColor Red
+    }
+    $downloads = @($downloads | Where-Object { $_.Name -ne "Claude Desktop" })
+}
+
 if ($downloads.Count -eq 0) {
     Write-Host "모든 프로그램이 이미 설치되어 있습니다!" -ForegroundColor Green
 } else {
